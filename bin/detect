@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+if test -n "$(find . -type f -name '*.rockspec' | sed 1q)"; then
+    echo Tarantool
+else
+    exit 1
+fi

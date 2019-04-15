@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+DEFAULT_VERSION="1.10.3-5-ga1d53a7"
+TT_EE_VERSION=${DEFAULT_VERSION}
+TARANTOOL_EE_URL="https://download.tarantool.io/enterprise/tarantool-enterprise-bundle-${TT_EE_VERSION}.tar.gz"
+
+export_env_dir() {
+  env_dir=$1
+  whitelist_regex=${2:-''}
+  blacklist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d ${env_dir} ]; then
+    for e in $(ls "${env_dir}"); do
+      echo ${e} && export ${e}=$(cat ${env_dir}/${e})
+    done
+  fi
+}
+
+set -eo pipefail
+
+# Set the layersdir variable to be the first argument from the build lifecycle
+layersdir=$1
+
+export_env_dir $2/env *
+
+if [[ ! -f ${layersdir}/runtime.txt ]]; then
+	echo "${DEFAULT_VERSION}" > ${layersdir}/runtime.txt
+else
+	TT_EE_VERSION=$(cat runtime.txt)
+fi
+
+
+echo "---> Tarantool Enterprise Buildpack"
+
+echo "---> Downloading and extracting Tarantool Enterprise bundle"
+
+echo -e 'launch = true' > $layersdir/tarantool.toml
+
+if test -z ${TARANTOOL_EE_USER} || test -z ${TARANTOOL_EE_PASSWORD}; then
+    echo 'TARANTOOL_EE_USER or TARANTOOL_EE_PASSWORD not provided!'
+    exit 1
+fi
+
+wget --http-user ${TARANTOOL_EE_USER} --http-password ${TARANTOOL_EE_PASSWORD} -P "${layersdir}" ${TARANTOOL_EE_URL}
+
+tar -C "${layersdir}" -xvf "${layersdir}/tarantool-enterprise-bundle-${TT_EE_VERSION}.tar.gz"
+
+source ${layersdir}/tarantool-enterprise/env.sh
+
+${layersdir}/tarantool-enterprise/tarantoolctl rocks make test-scm-1.rockspec
+
+mkdir -p ${layersdir}/tarantool/bin &&
+mv ${layersdir}/tarantool-enterprise/tarantool ${layersdir}/tarantool/bin
+
+echo 'processes = [{ type = "web", command = "tarantool init.lua"}]' > ${layersdir}/launch.toml
