@@ -2,7 +2,7 @@
 
 set -e
 
-if test -n "$(find . -type f -name '*.rockspec' | sed 1q)"; then
+if test -n "$(find . -type f -name '*.rockspec' -maxdepth 1 | sed 1q)"; then
     echo Tarantool
 else
     exit 1

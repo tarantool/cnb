@@ -46,7 +46,18 @@ tar -C "${layersdir}" -xvf "${layersdir}/tarantool-enterprise-bundle-${TT_EE_VER
 
 source ${layersdir}/tarantool-enterprise/env.sh
 
-${layersdir}/tarantool-enterprise/tarantoolctl rocks make test-scm-1.rockspec
+PRE_SCRIPT=$(find . -type f -name ${layersdir}/.tarantoolapp.pre -maxdepth 1 | sed 1q)
+
+if [[ -f ${PRE_SCRIPT} ]]; then
+	exec ${PRE_SCRIPT}
+fi
+
+ROCKSPEC="$(find . -type f -name '${layersdir}/*.rockspec' -maxdepth 1 | sed 1q)"
+
+if test -n ${ROCKSPEC}; then
+	${layersdir}/tarantool-enterprise/tarantoolctl rocks make ${ROCKSPEC}
+fi
+
 
 mkdir -p ${layersdir}/tarantool/bin &&
 mv ${layersdir}/tarantool-enterprise/tarantool ${layersdir}/tarantool/bin
